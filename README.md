@@ -21,6 +21,6 @@ Instructions:
    pw1
 6. Alternatively you can type out the accounts.json yourself in the following format:
    {
-   <court*choice>*<timing_range>: {id: xxx, pw: xxx},
+   <court_choice>\*<timing_range>: {id: xxx, pw: xxx},
    Eg. 1_0800-0900: {id: xxx, pw: xxx}
    }
