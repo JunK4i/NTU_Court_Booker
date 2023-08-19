@@ -12,7 +12,7 @@ Instructions:
 
 3. Single Booking is used for more competitive bookings
 
-4. Multiple Booking is used to automate booking of multiple courts of less competitive courts. It uses multithreading to make the bookings concurrently. This operation requires an accounts.json file in the same directory.
+4. Multiple Booking is used to automate booking of multiple less competitive courts. It uses multithreading to make the bookings concurrently. This operation requires an accounts.json file in the same directory.
 
 5. In order to generate the accounts.json, you need to set the timing range, court range using the functions in the terminal menu, and select "Auto Assign Accounts", and enter the account details accordingly. To speed up this process you can also copy paste a list in the following format:
    id1

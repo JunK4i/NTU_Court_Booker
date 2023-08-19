@@ -268,11 +268,6 @@ def loginAndBook(court, timing, facility_type, target_date, username, password):
 
     try:
         print("Starting loginAndBook")
-        # print(
-        #     "loginAndBook Args: {}, {}, {}, {}, {}, {}".format(
-        #         court, timing, facility_type, target_date, username, password
-        #     )
-        # )
         driver = webdriver.Chrome()
         driver.implicitly_wait(5)
         date = target_date.strftime("%d-%b-%Y")
