@@ -17,8 +17,9 @@ Instructions:
 5. In order to generate the accounts.json, you need to set the timing range, court range using the functions in the terminal menu, and select "Auto Assign Accounts", and enter the account details accordingly. To speed up this process you can also copy paste a list in the following format:
    id1
    pw1
-   id1
-   pw1
+   id2
+   pw3
+   if the terminal says pw:, press enter and enter 0, if the terminal says id: then enter 0 directly.
 6. Alternatively you can type out the accounts.json yourself in the following format:
    {
    <court_choice>\*<timing_range>: {id: xxx, pw: xxx},
