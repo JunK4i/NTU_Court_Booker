@@ -4,6 +4,7 @@ from time import sleep
 import datetime
 import concurrent.futures
 import traceback
+import pause
 from termcolor import colored
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -275,17 +276,23 @@ def loginAndBook(court, timing, facility_type, target_date, username, password):
         driver = webdriver.Chrome()
         driver.implicitly_wait(3)
         date = target_date.strftime("%d-%b-%Y")
-        print(
-            f"Waiting for target date. court: {court}, timing: {timing_range}, facility_type: {facility_type}, target_date: {target_date}, username: {username}, password: {password}"
+        print("Waiting for 2359:30 to log in")
+        pause.until(
+            datetime.datetime.combine(datetime.date.today(), datetime.time(23, 59, 30))
         )
         login_status = login(username, password, driver)
-
-        while True:
-            if (datetime.date.today() + datetime.timedelta(days=7)) >= target_date:
-                # print(datetime.date.today() + datetime.timedelta(days=7))
-                # print(target_date)
-                break
-            sleep(0.5)
+        print(
+            f"Waiting for target date. court: {court}, timing: {timing_range}, facility_type: {facility_type}, target_date: {date}, username: {username}, password: {password}"
+        )
+        # if target date is within 7 days
+        if (datetime.date.today() + datetime.timedelta(days=7)) >= target_date:
+            print("Target date reached, starting the remaining process")
+        # midnight booking
+        else:
+            pause.until(
+                datetime.datetime.combine(target_date, datetime.time(0, 0, 0, 0))
+            )
+            print("Target date reached, starting the remaining process")
         print(f"{username} target date reached, starting the remaining process")
 
         if login_status:
