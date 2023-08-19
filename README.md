@@ -19,7 +19,8 @@ Instructions:
    pw1
    id2
    pw3
-   if the terminal says pw:, press enter and enter 0, if the terminal says id: then enter 0 directly.
+   if the terminal says pw:, press enter and enter 0, else the terminal should instruct u you enter 0.
+
 6. Alternatively you can type out the accounts.json yourself in the following format:
    {
    <court_choice>\*<timing_range>: {id: xxx, pw: xxx},
