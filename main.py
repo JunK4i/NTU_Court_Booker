@@ -274,7 +274,7 @@ def loginAndBook(court, timing, facility_type, target_date, username, password):
         #     )
         # )
         driver = webdriver.Chrome()
-        driver.implicitly_wait(3)
+        driver.implicitly_wait(5)
         date = target_date.strftime("%d-%b-%Y")
         print("Waiting for 2359:30 to log in")
         pause.until(
