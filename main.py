@@ -269,30 +269,44 @@ def loginAndBook(court, timing, facility_type, target_date, username, password):
     try:
         print("Starting loginAndBook")
         driver = webdriver.Chrome()
-        driver.implicitly_wait(5)
+        driver.implicitly_wait(30)
         date = target_date.strftime("%d-%b-%Y")
-        print("Waiting for 2359:30 to log in")
-        pause.until(
-            datetime.datetime.combine(datetime.date.today(), datetime.time(23, 59, 30))
-        )
-        login_status = login(username, password, driver)
+        login_status = False
         print(
             f"Waiting for target date. court: {court}, timing: {timing_range}, facility_type: {facility_type}, target_date: {date}, username: {username}, password: {password}"
         )
         # if target date is within 7 days
         if (datetime.date.today() + datetime.timedelta(days=7)) >= target_date:
-            print("Target date reached, starting the remaining process")
+            login_status = login(username, password, driver)
+            print(f"{username} target date reached, starting the remaining process")
         # midnight booking
         else:
+            print("Waiting for 2358:00 to log in")
             pause.until(
-                datetime.datetime.combine(target_date, datetime.time(0, 0, 0, 0))
+                datetime.datetime.combine(
+                    datetime.date.today(), datetime.time(23, 58, 00)
+                )
             )
-            print("Target date reached, starting the remaining process")
-        print(f"{username} target date reached, starting the remaining process")
+            login_status = login(username, password, driver)
 
+            print(
+                "midnight booking. waiting till 0000, time now:{}. Waiting for {}".format(
+                    datetime.datetime.now(),
+                    datetime.datetime.combine(
+                        (target_date - datetime.timedelta(days=7)),
+                        datetime.time(0, 0, 0, 0),
+                    ),
+                )
+            )
+            pause.until(
+                datetime.datetime.combine(
+                    (target_date - datetime.timedelta(days=7)),
+                    datetime.time(0, 0, 0, 0),
+                )
+            )
+            print(f"{username} target date reached, starting the remaining process")
         if login_status:
             booking_status = doBooking(facility_type, court, date, timing, driver)
-
         return f"{username},{facility_type},C{court},{timing_range} | login:{login_status} | booking:{booking_status} | time:{datetime.datetime.now()}"
     except Exception:
         traceback.print_exc()
