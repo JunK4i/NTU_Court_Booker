@@ -1,6 +1,6 @@
 # NTU_Facilities_Booker
 
-Selenium Facilities Booking Bot.
+Selenium Facilities Booking Bot for Tennis@SRC, MPF1,  MPF2. (You can find out the respective IDs by looking into the booking websites's HTML)
 
 It automates "clicking of buttons" in order to increase the speed of the booking operation. However the bottleneck is still your network, so ensure you have good connection.
 
