@@ -1,3 +1,5 @@
+import requests
+import re
 import os
 import json
 from time import sleep
@@ -76,6 +78,15 @@ def main():
 
 
 def single_booking(facility_type):
+    # court = "1"
+    # timing = "1"
+    # facility_type = "Tennis SRC"
+    # target_date = datetime.date.today() + datetime.timedelta(days=7)
+    # username = "Jseow008"
+    # password = "2103971q2w3e4r%T"
+    # loginAndBook(court, timing, facility_type, target_date, username, password)
+    # return
+
     today = datetime.date.today()
     selection = input("Booking at what time? 1-Midnight, 2-Now\n")
     timedelta = 8
@@ -150,13 +161,7 @@ def multiple_booking(facility_type):
                         # run threads for each account assignment
                         court = court_timing.split("_")[0]
                         time = court_timing.split("_")[1]
-                        timing = [
-                            id
-                            for id, time_range in timing_hash.items()
-                            if time_range == time
-                        ][
-                            0
-                        ]  # get timing id
+                        timing = [id for id, time_range in timing_hash.items() if time_range == time][0]  # get timing id
                         username = account["id"]
                         password = account["pw"]
 
@@ -262,6 +267,7 @@ def multiple_booking(facility_type):
 
 
 def loginAndBook(court, timing, facility_type, target_date, username, password):
+    # print(f"{court} {timing} {facility_type} {target_date} {username} {password}")
     login_status = False
     booking_status = False
     timing_range = get_timing_hash(facility_type)[timing]
@@ -306,7 +312,13 @@ def loginAndBook(court, timing, facility_type, target_date, username, password):
             )
             print(f"{username} target date reached, starting the remaining process")
         if login_status:
-            booking_status = doBooking(facility_type, court, date, timing, driver)
+            booking_status = doBookingRequests(
+                facility_type, court, date, timing, driver, username, password
+            )
+            # booking_status = doBookingSelenium(
+            #     facility_type, court, date, timing, driver
+            # )
+
         return f"{username},{facility_type},C{court},{timing_range} | login:{login_status} | booking:{booking_status} | time:{datetime.datetime.now()}"
     except Exception:
         traceback.print_exc()
@@ -337,7 +349,7 @@ def login(username, password, driver):
         return True
 
 
-def doBooking(facility_type, court, date, timing, driver):
+def doBookingSelenium(facility_type, court, date, timing, driver):
     timing_range = get_timing_hash(facility_type)[timing]
     try:
         facility_id = facility_map[facility_type]
@@ -366,6 +378,171 @@ def doBooking(facility_type, court, date, timing, driver):
         print(f"Booking {facility_type} C{court} {timing_range} on {date} successful")
         driver.close()
         return True
+
+
+def doBookingRequests(facility_type, court, date, timing, driver, username, password):
+    cookies = driver.get_cookies()
+    s = requests.Session()
+    for cookie in cookies:
+        if "sameSite" in cookie:
+            cookie.pop("sameSite")
+        if "httpOnly" in cookie:
+            httpO = cookie.pop("httpOnly")
+            cookie["rest"] = {"httpOnly": httpO}
+        if "expiry" in cookie:
+            cookie["expires"] = cookie.pop("expiry")
+        s.cookies.set(**cookie)
+    url = driver.current_url
+    driver.close()
+    matric = ""
+    pattern = r"p1=([^&]+)"
+    # Use re.search to find the first match in the URL
+    match = re.search(pattern, url)
+    # Check if a match was found
+    if match:
+        # Extract and return the value of p1
+        matric = match.group(1)
+        print(matric+" found")
+    else:
+        # Return None if p1 is not found in the URL
+        print("no matric found")
+        return
+    facility_id = facility_map[facility_type]
+
+    headers = {
+        "user-agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.193 Safari/537.36"
+    }
+    link = f"https://wis.ntu.edu.sg/pls/webexe88/srce_smain_s.srce$sel31_o?p1={matric}&p2=&p_info={facility_id}"
+
+    facility_code = booking_code_map[facility_type]
+    value = f"{facility_code}{court}{date}{timing}"
+
+    try:
+        resp = s.get(link, headers=headers).text
+        if 'alert("Please log in' in resp:
+            print()
+            print(f"[!] Account {username} seems to be logged out! Logging in again!")
+            # login(username, password, driver)
+            print()
+            return False
+    except Exception as e:
+        print("Failed to open link {} due to {}".format(link, str(e)))
+        return False
+
+    matching_slots = re.findall(
+        r'NAME="p_rec" VALUE="(' + facility_code + court + date + timing + r')"', resp
+    )
+    matching_slots.extend(
+        re.findall(
+            r'name="p_rec" value="(' + facility_code + court + date + timing + r')"',
+            resp,
+        )
+    )
+
+    if len(matching_slots) == 0:
+        print()
+        print(
+            "{}:  No available slot for {} (Court No. {}) on date {}".format(
+                username, facility_code, court, date, timing
+            )
+        )
+        print()
+        return False
+    else:
+        matching_slots = matching_slots[-1]
+        print("{} Trying to book slot {}".format(username, matching_slots))
+
+    link = "https://wis.ntu.edu.sg/pls/webexe88/srce_sub1.srceb$sel32"
+    headers = {
+        "Referer": f"https://wis.ntu.edu.sg/pls/webexe88/srce_smain_s.srce$sel31_o?p1={matric}&p2=&p_info={facility_id}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
+    }
+    data = {
+        "p_rec": matching_slots.strip(),
+        "p1": matric,
+        "p2": "",
+        "p_info": facility_id,
+    }
+    try:
+        resp = s.post(link, headers=headers, data=data).text
+        if 'alert("Please log in' in resp:
+            print(f"[!] Account {username} seems to be logged out! Logging in again!")
+            login()
+            return False
+    except Exception as e:
+        print()
+        print(
+            "{username} Failed to open link {} due to {}".format(username, link, str(e))
+        )
+        print()
+        return False
+    # final confirmation
+
+    link = "https://wis.ntu.edu.sg/pls/webexe88/srce_sub1.srceb$sel33"
+    headers = {
+        "Referer": "https://wis.ntu.edu.sg/pls/webexe88/srce_sub1.srceb$sel32",
+        "user-agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.193 Safari/537.36",
+    }
+    try:
+        p1 = re.findall(r'NAME="p1" VALUE="(.*?)">', resp)[0]
+    except:
+        print()
+        print(f"{username} You have an old booking! Booking failed!")
+        print()
+        return True
+    p2 = re.findall(r'NAME="p2" VALUE="(.*?)">', resp)[0]
+    fdate = re.findall(r'NAME="fdate" VALUE="(.*?)">', resp)[0]
+    fcode = re.findall(r'NAME="fcode" VALUE="(.*?)">', resp)[0]
+    floc = re.findall(r'NAME="floc" VALUE="(.*?)">', resp)[0]
+    sno = re.findall(r'NAME="sno" VALUE="(.*?)">', resp)[0]
+    stype = re.findall(r'NAME="stype" VALUE="(.*?)">', resp)[0]
+    fcourt = re.findall(r'NAME="fcourt" VALUE="(.*?)">', resp)[0]
+    ftype = re.findall(r'NAME="ftype" VALUE="(.*?)">', resp)[0]
+    rptype = re.findall(r'NAME="rptype" VALUE="(.*?)">', resp)[0]
+    P_info = re.findall(r'NAME="P_info" VALUE="(.*?)">', resp)[0]
+    opmode = re.findall(r'NAME="opmode" VALUE="(.*?)">', resp)[0]
+    frmk = re.findall(r'NAME="frmk" VALUE="(.*?)">', resp)[0]
+    data = {
+        "noaguest": "",
+        "frmfrom": "selfbook",
+        "p1": p1,
+        "p2": p2,
+        "noaguest": "0",
+        "fdate": fdate,
+        "fcode": fcode,
+        "floc": floc,
+        "sno": sno,
+        "stype": stype,
+        "paytype": "CC",
+        "fcourt": fcourt,
+        "ftype": ftype,
+        "rptype": rptype,
+        "P_info": P_info,
+        "opmode": opmode,
+        "frmk": frmk,
+        "bOption": "Confirm",
+    }
+    try:
+        resp = s.post(link, headers=headers, data=data).text
+    except Exception as e:
+        print()
+        print("{} Failed to open link {} due to {}".format(username, link, str(e)))
+        print()
+        return False
+    if "<font size=3>Official Permit</font>" in resp:
+        print()
+        print(
+            f" court {court}_{timing} on {date} Booking successful! Account: {username} "
+        )
+        print("time completed:" + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        print()
+        return True
+    else:
+        print()
+        print(f" court {court}_{timing} on {date} Booking failed! Account: {username}")
+        print(resp)
+        print()
+        return False
 
 
 if __name__ == "__main__":
